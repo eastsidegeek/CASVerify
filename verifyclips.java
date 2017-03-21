@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 import com.filepool.fplibrary.*;
 
@@ -41,6 +43,8 @@ public class verifyclips {
 		System.out.print("Output File> ");
 		String outfilename = stdin.readLine();
 		
+		
+		
 		file = new File(answer);
 		fileReader = new FileReader(file);
 		
@@ -50,6 +54,11 @@ public class verifyclips {
 							
 		bufferedReader = new BufferedReader(fileReader);
 		
+		LocalDate startdate = LocalDate.now();
+		LocalTime starttime = LocalTime.now();
+		
+		System.out.print("Start time " + startdate + " " + starttime + "\r\n");
+		pw.print("Start time " + startdate + " " + starttime + "\r\n");
 			
 		String line;
 			
@@ -66,7 +75,7 @@ public class verifyclips {
 			
 			while((line = bufferedReader.readLine()) != null) {
 				if(line.length() == 53) {
-					pw.print("Checking for clip "+line+"\n");
+					System.out.print("Checking for clip "+line);
 					
 					try {
 						exists = FPClip.Exists(thePool,line);
@@ -76,8 +85,10 @@ public class verifyclips {
 					
 					pw.print(line + ","+exists+"\n");
 					if(exists == true) {
+						System.out.print(", Found\r\n");
 						iExistCount++;
 					} else {
+						System.out.print(", Not Found\r\n");
 						iMissingCount++;
 					}
 				} // end clip length check
@@ -92,10 +103,20 @@ public class verifyclips {
 			System.exit(exitCode);
 		} // end catch 
 			
-		pw.print("--------------\nProcessing complete.\n");
-		pw.print(iExistCount + " records exist\n");
-		pw.print(iMissingCount + " records missing\n");
+		LocalDate enddate = LocalDate.now();
+		LocalTime endtime = LocalTime.now();
+		
+		pw.print("--------------\nProcessing complete.\r\n");
+		pw.print("End time " + enddate + " " + endtime + "\r\n");
+		pw.print(iExistCount + " records exist\r\n");
+		pw.print(iMissingCount + " records missing\r\n");
 		pw.print(iExceptionCount + " records caused Centera SDK exceptions\n");
+		
+		System.out.print("--------------\nProcessing complete.\r\n");
+		System.out.print("End time " + enddate + " " + endtime + "\r\n");
+		System.out.print(iExistCount + " records exist\r\n");
+		System.out.print(iMissingCount + " records missing\r\n");
+		System.out.print(iExceptionCount + " records caused Centera SDK exceptions\n");
 		// Always close the Pool connection when finished.
 		
 		System.out.println(
