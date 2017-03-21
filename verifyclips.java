@@ -14,24 +14,27 @@ public class verifyclips {
 
 	public static void main(String[] args) throws IOException {
 		
+		final ConcurrentStack<String> stack = new ConcurrentStack<>();
+		
 		int exitCode = 0;
 		String appName="HCA CAS Verify";
 	    String appVersion="3.1";
 	    String poolAddress = "";
 	    BufferedReader bufferedReader;
-	    PrintWriter pw;
+	    
 	    FileWriter fw;
 	    File outfile;
 	    File file;
 	    FileReader fileReader;
-	    int iExistCount = 0;
-		int iMissingCount = 0;
-		int iExceptionCount = 0;
+	    SynchronizedCounter iExistCount = new SynchronizedCounter();
+	    SynchronizedCounter iMissingCount = new SynchronizedCounter();
+	    SynchronizedCounter iExceptionCount = new SynchronizedCounter();
+
 		
 		InputStreamReader inputReader = new InputStreamReader(System.in);
 		BufferedReader stdin = new BufferedReader(inputReader);
-		boolean exists = false;
-		FPPool thePool;
+		
+		//FPPool thePool;
 		
 		
 		System.out.print("Address of cluster> ");
@@ -43,6 +46,10 @@ public class verifyclips {
 		System.out.print("Output File> ");
 		String outfilename = stdin.readLine();
 		
+		System.out.print("Number of threads> ");
+		String sNumThreads = stdin.readLine();
+		
+		int iNumThreads = Integer.parseInt(sNumThreads);
 		
 		
 		file = new File(answer);
@@ -50,15 +57,15 @@ public class verifyclips {
 		
 		outfile = new File(outfilename);
 		fw = new FileWriter(outfile, false);
-		pw = new PrintWriter(fw);
+		final PrintWriter pw = new PrintWriter(fw);
 							
 		bufferedReader = new BufferedReader(fileReader);
 		
 		LocalDate startdate = LocalDate.now();
 		LocalTime starttime = LocalTime.now();
 		
-		System.out.print("Start time " + startdate + " " + starttime + "\r\n");
-		pw.print("Start time " + startdate + " " + starttime + "\r\n");
+		System.out.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + "threads\r\n");
+		pw.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + "threads\r\n");
 			
 		String line;
 			
@@ -71,28 +78,58 @@ public class verifyclips {
 				FPLibraryConstants.FP_LAZY_OPEN);
 
 			// open cluster connection
-			thePool = new FPPool(poolAddress);
+			final FPPool thePool = new FPPool(poolAddress);
 			
+			
+			// Read entire file onto threadsafe stack
 			while((line = bufferedReader.readLine()) != null) {
-				if(line.length() == 53) {
-					System.out.print("Checking for clip "+line);
-					
-					try {
-						exists = FPClip.Exists(thePool,line);
-					} catch (FPLibraryException e) {
-						iExceptionCount++;
-					} // end catch 
-					
-					pw.print(line + ","+exists+"\n");
-					if(exists == true) {
-						System.out.print(", Found\r\n");
-						iExistCount++;
-					} else {
-						System.out.print(", Not Found\r\n");
-						iMissingCount++;
+				stack.push(line);
+			}
+			
+			// start up threads to check for existence
+			for(int i=0;i<iNumThreads;i++) {
+				new Thread("" + i) {
+					public void run() {
+						String myLine = "";
+						boolean exists = false;
+						
+						while((myLine = stack.pop()) != null) {
+							
+							if(myLine.length() == 53) {
+								//System.out.println("Checking for clip "+myLine);
+								
+								try {
+									exists = FPClip.Exists(thePool,myLine);
+								} catch (FPLibraryException e) {
+									iExceptionCount.increment();
+								} // end catch 
+								
+								pw.println(myLine + ","+exists);
+								if(exists == true) {
+									System.out.println("Clip "+myLine+" Found");
+									iExistCount.increment();
+								} else {
+									System.out.println("Clip "+myLine+" Not Found");
+									iMissingCount.increment();
+								}
+							} // end clip length check
+						} // end while
+					} // end run
+				}.start(); // end new Thread
+				
+			} // end for
+			
+			Thread t;
+			for(int i=0;i<iNumThreads;i++) { // wait for all threads to complete
+				t = getThreadByName("" + i);
+				try {
+					if(t != null) { // if it's completed already it might be null
+						t.join();
 					}
-				} // end clip length check
-			} // end while
+				} catch (InterruptedException e) {
+					System.err.println("Issue with thread: " + e.getMessage() + "\r\n");
+				} // end catch
+			}
 			
 			thePool.Close();
 			
@@ -106,17 +143,17 @@ public class verifyclips {
 		LocalDate enddate = LocalDate.now();
 		LocalTime endtime = LocalTime.now();
 		
-		pw.print("--------------\nProcessing complete.\r\n");
+		pw.print("\r\n--------------\nProcessing complete.\r\n");
 		pw.print("End time " + enddate + " " + endtime + "\r\n");
-		pw.print(iExistCount + " records exist\r\n");
-		pw.print(iMissingCount + " records missing\r\n");
-		pw.print(iExceptionCount + " records caused Centera SDK exceptions\n");
+		pw.print(iExistCount.value() + " records exist\r\n");
+		pw.print(iMissingCount.value() + " records missing\r\n");
+		pw.print(iExceptionCount.value() + " records caused Centera SDK exceptions\n");
 		
 		System.out.print("--------------\nProcessing complete.\r\n");
 		System.out.print("End time " + enddate + " " + endtime + "\r\n");
-		System.out.print(iExistCount + " records exist\r\n");
-		System.out.print(iMissingCount + " records missing\r\n");
-		System.out.print(iExceptionCount + " records caused Centera SDK exceptions\n");
+		System.out.print(iExistCount.value() + " records exist\r\n");
+		System.out.print(iMissingCount.value() + " records missing\r\n");
+		System.out.print(iExceptionCount.value() + " records caused Centera SDK exceptions\n");
 		// Always close the Pool connection when finished.
 		
 		System.out.println(
@@ -126,10 +163,18 @@ public class verifyclips {
 		bufferedReader.close();
 		pw.close();
 		fw.close();
-				
-
+	
 		System.exit(exitCode);
 		
 	} // end main
 
+	public static Thread getThreadByName(String threadName) {
+		for(Thread t : Thread.getAllStackTraces().keySet()) {
+			if (t.getName().equals(threadName)) return t;
+		} // end for
+		return null;
+	}
+	
 } // end class verifyclips
+
+
