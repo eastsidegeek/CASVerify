@@ -29,13 +29,9 @@ public class verifyclips {
 	    SynchronizedCounter iExistCount = new SynchronizedCounter();
 	    SynchronizedCounter iMissingCount = new SynchronizedCounter();
 	    SynchronizedCounter iExceptionCount = new SynchronizedCounter();
-
 		
 		InputStreamReader inputReader = new InputStreamReader(System.in);
 		BufferedReader stdin = new BufferedReader(inputReader);
-		
-		//FPPool thePool;
-		
 		
 		System.out.print("Address of cluster> ");
 		poolAddress = stdin.readLine();
@@ -64,8 +60,8 @@ public class verifyclips {
 		LocalDate startdate = LocalDate.now();
 		LocalTime starttime = LocalTime.now();
 		
-		System.out.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + "threads\r\n");
-		pw.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + "threads\r\n");
+		System.out.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + " threads\r\n");
+		pw.print("Start time " + startdate + " " + starttime + " with " + iNumThreads + " threads\r\n");
 			
 		String line;
 			
@@ -173,8 +169,5 @@ public class verifyclips {
 			if (t.getName().equals(threadName)) return t;
 		} // end for
 		return null;
-	}
-	
+	}	
 } // end class verifyclips
-
-
