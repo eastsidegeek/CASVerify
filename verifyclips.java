@@ -24,6 +24,8 @@ public class verifyclips {
 	    
 	    FileWriter fw;
 	    File outfile;
+	    File clipfile;
+	    FileWriter fwclip;
 	    File file;
 	    FileReader fileReader;
 	    SynchronizedCounter iExistCount = new SynchronizedCounter();
@@ -33,14 +35,17 @@ public class verifyclips {
 		InputStreamReader inputReader = new InputStreamReader(System.in);
 		BufferedReader stdin = new BufferedReader(inputReader);
 		
-		System.out.print("Address of cluster> ");
+		System.out.print("Cluster Connection String> ");
 		poolAddress = stdin.readLine();
 		
 		System.out.print("Input File> ");
 		String answer = stdin.readLine();
 		
-		System.out.print("Output File> ");
+		System.out.print("Output File for per clip stats and summary> ");
 		String outfilename = stdin.readLine();
+		
+		System.out.print("Output File for missing clip IDs> ");
+		String clipfilename = stdin.readLine();
 		
 		System.out.print("Number of threads> ");
 		String sNumThreads = stdin.readLine();
@@ -54,6 +59,10 @@ public class verifyclips {
 		outfile = new File(outfilename);
 		fw = new FileWriter(outfile, false);
 		final PrintWriter pw = new PrintWriter(fw);
+		
+		clipfile = new File(clipfilename);
+		fwclip = new FileWriter(clipfile,false);
+		final PrintWriter pwclip = new PrintWriter(fwclip);
 							
 		bufferedReader = new BufferedReader(fileReader);
 		
@@ -98,14 +107,17 @@ public class verifyclips {
 									exists = FPClip.Exists(thePool,myLine);
 								} catch (FPLibraryException e) {
 									iExceptionCount.increment();
+									pwclip.println(myLine);
 								} // end catch 
 								
 								pw.println(myLine + ","+exists);
+								
 								if(exists == true) {
 									System.out.println("Clip "+myLine+" Found");
 									iExistCount.increment();
 								} else {
 									System.out.println("Clip "+myLine+" Not Found");
+									pwclip.println(myLine);
 									iMissingCount.increment();
 								}
 							} // end clip length check
@@ -159,6 +171,8 @@ public class verifyclips {
 		bufferedReader.close();
 		pw.close();
 		fw.close();
+		pwclip.close();
+		fwclip.close();
 	
 		System.exit(exitCode);
 		
